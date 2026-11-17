@@ -152,8 +152,11 @@ Because mobile screens lack mouse hover events:
   - Save to Photos (Camera Roll)
   - Share via AirDrop / CapCut
 
-### D. Native Share Sheet Integration
-Uses `UIActivityViewController` to share exported clips directly into iOS editing tools (CapCut, Premiere Rush) or social platforms (Instagram, TikTok).
+### D. Native Share Sheet, Picture-in-Picture & Cloud Storage Integration
+* **Native Share Sheet**: Uses `UIActivityViewController` to share exported clips directly into iOS editing tools (CapCut, Premiere Rush) or social platforms (Instagram, TikTok).
+* **Picture-in-Picture (PiP)**: Uses `AVPictureInPictureController` with `AVPlayerLayer` so editors can pop out an anime clip into a floating window to watch and reference while editing in CapCut simultaneously.
+* **Cloud Storage (Google Drive, Dropbox, iCloud)**: Native document picking via `UIDocumentPickerViewController` with security-scoped bookmarking allows streaming, previewing, and cutting raw episodes stored in the cloud without taking up phone storage.
+* **Scenepacks & Events**: Dedicated Scenepacks drawer for organizing custom clip folders, and Community Events browser consuming the central AMVerge contest API.
 
 ## 5. Local Storage & Sandbox Architecture
 
