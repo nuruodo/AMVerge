@@ -114,7 +114,13 @@ Anime files often include multiple audio streams (Japanese audio, English dubs, 
   1. `Copy`: Stream-copy the selected audio track without re-encoding.
   2. `No Audio`: Strips audio entirely (`-an`), generating clean video cuts ready for AMV editing.
 
-### B. Scene Detection Methods
+### C. Mid-Clip Splitting ("Split Scene")
+When previewing an extended scene, tapping the scissor icon splits the scene at the current playhead position (`currentTime`), creating two contiguous scene entries in SwiftData.
+
+### D. Background Task Lifecycle Protection
+Exporting large batches of clips persists when backgrounded by wrapping export jobs in `UIApplication.shared.beginBackgroundTask(expirationHandler:)` or scheduling with `BGProcessingTaskRequest`.
+
+### E. Scene Detection Methods
 1. **Keyframe Sync Scanner (Default)**:
    * Uses `AVAssetReader` and `AVAssetReaderTrackOutput`.
    * Inspects `CMSampleBuffer` packet metadata to locate sync samples (`kCMSampleAttachmentKey_NotSync == false`).
