@@ -135,10 +135,52 @@ iOS enforces strict sandboxing:
 * `SceneModel`: id, episode, sceneIndex, startSeconds, endSeconds, thumbnailPath
 * `ScenepackModel`: id, name, createdAt, scenes
 
-## 6. Development Roadmap
+## 6. Device-Tier Optimizations & Performance Matrix
+
+To ensure stability across all supported iPhone and iPad models—from older 3GB/4GB RAM devices (iPhone XR, 11, SE 2/3) up to the latest 8GB A17/A18 Pro devices—the application incorporates strict memory and hardware tiering.
+
+### A. Defeating the iOS "Jetsam" Low-Memory Killer
+Older iPhones impose strict per-process memory limits (~300MB to 400MB before the kernel sends `SIGKILL`). Naively decoding full-frame video thumbnails easily exceeds this ceiling.
+* **Maximum Thumbnail Resolution Clamping**:
+  ```swift
+  let generator = AVAssetImageGenerator(asset: asset)
+  // Clamp decoded frame size to exact display resolution (approx. 230 KB uncompressed vs. 33 MB for 4K)
+  generator.maximumSize = CGSize(width: 320, height: 180)
+  ```
+* **Memory-Pressure Defense (`NSCache`)**:
+  - Total memory cache limit capped at **25MB**.
+  - Immediate purge triggered upon receiving `UIApplication.didReceiveMemoryWarningNotification`:
+    ```swift
+    NotificationCenter.default.addObserver(
+        forName: UIApplication.didReceiveMemoryWarningNotification,
+        object: nil,
+        queue: .main
+    ) { _ in
+        ThumbnailCache.shared.clearMemoryCache()
+    }
+    ```
+
+### B. 10-Bit Anime HEVC (H.265) Hardware Decoding
+Most high-end anime releases and scenepacks are mastered in **10-bit HEVC (Main 10 Profile)**.
+* **A12 Bionic and Newer (iPhone XR, XS, 11, 12, 13, 14, 15, 16)**: Full hardware-accelerated 10-bit HEVC decoding. Plays natively at 60 FPS with minimal battery drain.
+* **Legacy Devices (Older than A12, e.g. iPhone X / 8)**: Hardware decoder only handles 8-bit HEVC; 10-bit triggers software fallback. On these devices, the app automatically generates a lightweight 480p H.264 proxy for smooth timeline scrubbing.
+
+### C. Thermal Management & QoS Dispatching
+* **Stream-Copy Trimming**: Utilizing container transmuxing (`-c copy`) requires **0% CPU/GPU re-encoding work**, enabling 10+ clips to export in seconds without triggering device heat.
+* **Background Tasks Quality-of-Service**: Keyframe scanning runs on `DispatchQueue.global(qos: .utility)` to prevent CPU thread spikes and thermal throttling.
+
+### D. Display & Orientation Adaptability
+* **60Hz Standard iPhones (iPhone 11, 12, 13, 14, 15, 16)**: Touch scrub events throttled to 30–60 FPS to prevent decoder congestion.
+* **120Hz ProMotion iPhones (iPhone 13 Pro – 16 Pro, iPad Pro)**: `LazyVGrid` operates at full 120 FPS adaptive frame rate for fluid browsing through hundreds of scene cuts.
+* **Screen Layouts**:
+  - Compact (iPhone SE / mini): 2-column layout with half-height swipe-down sheets.
+  - Standard & Pro Max: 2-column layout with floating action bar.
+  - iPadOS: 3 to 5 columns with Stage Manager, Split View, and native drag-and-drop.
+
+## 7. Development Roadmap
 
 1. **Phase 1**: SwiftUI navigation scaffold, document picker for video files, and security-scoped resource management.
 2. **Phase 2**: `AVAssetReader` keyframe scanner and `FFmpegKit.xcframework` stream-copy trimming pipeline.
-3. **Phase 3**: SwiftData persistence schema and `AVAssetImageGenerator` batch thumbnail generation.
+3. **Phase 3**: SwiftData persistence schema, `AVAssetImageGenerator` clamped batch thumbnail generation, and memory-pressure purge handlers.
 4. **Phase 4**: `LazyVGrid` UI with touch scrubbing, haptic multi-select gestures, and floating action dock.
 5. **Phase 5**: PhotoKit export integration, AirDrop/Share sheet support, and iPadOS split-screen layout.
