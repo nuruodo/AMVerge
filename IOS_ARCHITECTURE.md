@@ -47,7 +47,7 @@ On iOS, Apple’s sandbox strictly prohibits `fork()` and `exec()`. Spawning com
 
 ## 3. Video Processing and Cutting Pipeline
 
-### A. Stream-Copy Trimming (FFmpegKit XCFramework)
+### A. Stream-Copy Trimming & Fast Merge (FFmpegKit XCFramework)
 When cutting clips at keyframe boundaries, FFmpegKit performs container-level transmuxing. It copies video and audio bitstreams directly into the new MP4 container without decoding or re-encoding:
 
 ```swift
@@ -78,6 +78,27 @@ final class VideoCutManager {
             } else {
                 let failLog = session.getFailStackTrace() ?? "Unknown error"
                 completion(.failure(NSError(domain: "VideoCutManager", code: Int(returnCode?.getValue() ?? -1), userInfo: [NSLocalizedDescriptionKey: failLog])))
+            }
+        }
+    }
+
+    /// Fast Merge / Concat demuxer (merges multiple selected clips into one scenepack)
+    func mergeClips(
+        clipURLs: [URL],
+        outputURL: URL,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
+        let fileListURL = FileManager.default.temporaryDirectory.appendingPathComponent("concat_list.txt")
+        let fileListContent = clipURLs.map { "file '\($0.path)'" }.joined(separator: "\n")
+        try? fileListContent.write(to: fileListURL, atomically: true, encoding: .utf8)
+
+        let command = "-f concat -safe 0 -i \"\(fileListURL.path)\" -c copy \"\(outputURL.path)\""
+        FFmpegKit.executeAsync(command) { session in
+            try? FileManager.default.removeItem(at: fileListURL)
+            if ReturnCode.isSuccess(session?.getReturnCode()) {
+                completion(.success(outputURL))
+            } else {
+                completion(.failure(NSError(domain: "VideoCutManager", code: -1, userInfo: [NSLocalizedDescriptionKey: session?.getFailStackTrace() ?? "Concat failed"])))
             }
         }
     }
