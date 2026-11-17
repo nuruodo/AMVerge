@@ -62,9 +62,11 @@ final class VideoCutManager {
         outputURL: URL,
         startSeconds: Double,
         durationSeconds: Double,
+        stripAudio: Bool = false,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        let command = "-ss \(startSeconds) -i \"\(inputURL.path)\" -t \(durationSeconds) -c copy -avoid_negative_ts make_zero \"\(outputURL.path)\""
+        let audioFlag = stripAudio ? "-an" : "-c:a copy"
+        let command = "-ss \(startSeconds) -i \"\(inputURL.path)\" -t \(durationSeconds) -c:v copy \(audioFlag) -avoid_negative_ts make_zero \"\(outputURL.path)\""
 
         FFmpegKit.executeAsync(command) { session in
             guard let session = session else {
@@ -104,6 +106,13 @@ final class VideoCutManager {
     }
 }
 ```
+
+### B. Multi-Track Audio & "No Audio" Mode
+Anime files often include multiple audio streams (Japanese audio, English dubs, commentary tracks).
+* **AVPlayer Audio Selection**: Users can switch between audio tracks using `playerItem.select(mediaSelectionOption, in: mediaSelectionGroup)`.
+* **Export Audio Options**:
+  1. `Copy`: Stream-copy the selected audio track without re-encoding.
+  2. `No Audio`: Strips audio entirely (`-an`), generating clean video cuts ready for AMV editing.
 
 ### B. Scene Detection Methods
 1. **Keyframe Sync Scanner (Default)**:
@@ -235,6 +244,13 @@ final class SceneScoutEngine {
     }
 }
 ```
+
+### B. Multi-Track Audio & "No Audio" Mode
+Anime files often include multiple audio streams (Japanese audio, English dubs, commentary tracks).
+* **AVPlayer Audio Selection**: Users can switch between audio tracks using `playerItem.select(mediaSelectionOption, in: mediaSelectionGroup)`.
+* **Export Audio Options**:
+  1. `Copy`: Stream-copy the selected audio track without re-encoding.
+  2. `No Audio`: Strips audio entirely (`-an`), generating clean video cuts ready for AMV editing.
 
 ### D. Workflow on Mobile
 1. **Search**: Instant text search surfaces matching scenes with similarity ranking pills (e.g. `94% match`).
